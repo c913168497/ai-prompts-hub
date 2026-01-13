@@ -6,7 +6,7 @@ ai-prompts-hub是一个基于Spring Boot的项目，用于管理和存储AI提�
 它能够帮助团队在各个系统间建立统一的AI编码规范，提高开发效率和代码质量。
 
 ## 使用说明
-本项目采用 spring boot + mysql 数据库
+本项目采用 spring boot + mysql + jdk17 
 
 先使用 mysql 数据库，创建一个数据库 ai_prompts, 然后创建各个表，表结构在 pom.xml所在目录 ai-prompts.sql 文件
 
