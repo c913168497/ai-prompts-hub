@@ -1,4 +1,22 @@
+## 项目介绍
+#### 项目名称
+ai-prompts-hub
+#### 项目描述
+ai-prompts-hub是一个基于Spring Boot的项目，用于管理和存储AI提示词。
+它能够帮助团队在各个系统间建立统一的AI编码规范，提高开发效率和代码质量。
+
 ## 使用说明
+本项目采用 spring boot + mysql 数据库
+
+先使用 mysql 数据库，创建一个数据库 ai_prompts, 然后创建各个表，表结构在 pom.xml所在目录 ai-prompts.sql 文件
+
+支持mcp拉取更新指定提示词规范
+![img_1.png](img_1.png)
+![img.png](img.png)
+
+
+mcp使用视频介绍：
+[使用示例.mp4](%E4%BD%BF%E7%94%A8%E7%A4%BA%E4%BE%8B.mp4)
 #### MCP配置
 ```json
 {
