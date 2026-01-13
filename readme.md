@@ -5,6 +5,11 @@ ai-prompts-hub
 ai-prompts-hub是一个基于Spring Boot的项目，用于管理和存储AI提示词。
 它能够帮助团队在各个系统间建立统一的AI编码规范，提高开发效率和代码质量。
 
+#### 关键词
+AI 团队规范管理
+
+团队AI编码规范管理工具
+
 ## 使用说明
 本项目采用 spring boot + mysql + jdk17 
 
