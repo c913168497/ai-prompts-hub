@@ -1,0 +1,3279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Hub</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-main: #111827;
+            --text-sub: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --preview-width: 500px;
+
+            --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            --font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            background: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased; /* 字体抗锯齿 */
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility; /* 优化文本渲染 */
+        }
+
+        /* --- Components --- */
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: white;
+            border-color: var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .btn-danger-text {
+            background: transparent;
+            color: #ef4444;
+            padding: 4px 8px;
+        }
+
+        .btn-danger-text:hover {
+            background: #fee2e2;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-sub);
+            border: none;
+        }
+
+        .btn-ghost:hover {
+            color: var(--primary);
+            background: #eef2ff;
+        }
+
+        .input {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem; /* 从 0.9rem 增加到 0.95rem */
+            font-family: var(--font-family-base);
+            line-height: 1.5;
+            transition: all 0.2s;
+        }
+
+        .input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); /* 更明显的焦点效果 */
+        }
+
+        textarea.input {
+            resize: vertical; /* 允许垂直调整大小 */
+            font-family: var(--font-family-mono); /* 代码字体更适合写 Prompt */
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* --- Layout --- */
+        #app {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+        }
+
+        .brand {
+            padding: 1.2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .project-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .project-item {
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-sub);
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .project-item:hover {
+            background: #f3f4f6;
+            color: var(--text-main);
+        }
+
+        .project-item.active {
+            background: #eef2ff;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        header {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+        }
+
+        .breadcrumb {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        /* Views */
+        .view-container {
+            height: calc(100vh - 60px);
+            background: #f3f4f6;
+            display: none;
+        }
+
+
+        /* editorView 特殊布局 */
+        #editorView {
+            display: none;
+            background: white;
+            overflow: hidden;
+        }
+
+        /* 当 editorView 激活时 */
+        #editorView[style*="display: flex"] {
+            display: flex !important;
+            flex-direction: column;
+        }
+
+        .dashboard-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        /* --- Table Styles (用于全局分类) --- */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table th {
+            background: #f9fafb;
+            text-align: left;
+            padding: 1rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        .data-table td:last-child {
+            width: 120px;
+            padding: 0.5rem 1rem;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover td {
+            background: #f9fafb;
+        }
+
+        .cat-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .input-group-item {
+            flex: 1;
+        }
+
+        .input-group-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+            color: var(--text-sub);
+        }
+
+        /* Prompt Studio View */
+        #promptStudio {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        .pane-left {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            min-width: 0;
+        }
+
+        /* 右侧预览面板 */
+        .pane-right {
+            width: var(--preview-width);
+            min-width: var(--preview-width);
+            background: white;
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            height: 100%;
+            font-family: var(--font-family-base);
+        }
+
+        .preview-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            letter-spacing: -0.01em;
+        }
+
+        /* 添加滚动容器样式 */
+        .preview-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 1.25rem;
+            min-height: 0; /* 重要：允许 flex 子项收缩 */
+        }
+
+        .preview-content > div[style*="text-align:center"] {
+            padding-top: 4rem !important;
+            color: #94a3b8 !important;
+            font-size: 0.95rem !important;
+            line-height: 1.6 !important;
+        }
+
+        .preview-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border);
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            flex-shrink: 0;
+        }
+
+        /* 预览块内容的 Markdown 样式 */
+        .preview-block-content {
+            margin-top: 0.5rem;
+            line-height: 1.5;
+            color: #334155;
+        }
+
+        .preview-block-content p {
+            margin: 0.4em 0;
+        }
+
+        .preview-block-content p:first-child {
+            margin-top: 0;
+        }
+
+        .preview-block-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .preview-block-content h3,
+        .preview-block-content h4 {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0.6em 0 0.3em 0;
+        }
+
+        .preview-block-content strong {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .preview-block-content code {
+            background: #f1f5f9;
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+            font-family: var(--font-family-mono);
+            font-size: 0.85em;
+            color: #e11d48;
+        }
+
+        .preview-block-content pre {
+            background: #1e293b;
+            padding: 0.6rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 0.5em 0;
+        }
+
+        .preview-block-content pre code {
+            background: transparent;
+            padding: 0;
+            color: #f1f5f9;
+            font-size: 0.85em;
+        }
+
+        .preview-block-content ul {
+            margin: 0.4em 0;
+            padding-left: 1.5em;
+        }
+
+        .preview-block-content li {
+            margin: 0.2em 0;
+            line-height: 1.4;
+        }
+
+        .preview-block-content br {
+            display: block;
+            content: "";
+            margin: 0.2em 0;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .toolbar-title h2 {
+            font-size: 1.2rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .toolbar-title p {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+
+        .prompt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+            padding-bottom: 2rem;
+        }
+
+        .prompt-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+            transition: all 0.2s;
+            cursor: pointer;
+            height: 160px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prompt-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .prompt-card.selected {
+            border-color: var(--primary);
+            background-color: #eef2ff;
+            border-width: 2px;
+        }
+
+        .checkbox-wrap {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
+        }
+
+        .custom-check {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .prompt-card.selected .custom-check {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .custom-check::after {
+            content: '✔';
+            color: white;
+            font-size: 12px;
+            display: none;
+        }
+
+        .prompt-card.selected .custom-check::after {
+            display: block;
+        }
+
+        .card-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.7rem;
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            padding-left: 24px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 10px;
+        }
+
+        .card-content {
+            flex: 1;
+            overflow: hidden;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            line-height: 1.4;
+            margin-top: 0.5rem;
+            padding-left: 24px;
+            mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+        }
+
+        .preview-section {
+            margin-bottom: 2rem; /* 从 1.5rem 增加到 2rem */
+        }
+
+        .preview-section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px; /* 从 0.5px 增加到 0.8px */
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 0.75rem; /* 从 0.5rem 增加 */
+            border-bottom: 2px solid var(--primary); /* 从 1px dashed 改为 2px solid */
+            padding-bottom: 6px; /* 从 4px 增加 */
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .preview-section-title::before {
+            content: '';
+            width: 8px; /* 从 6px 增加 */
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .preview-block {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            font-family: var(--font-family-base);
+            color: #334155;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .preview-block strong {
+            display: block;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid #e2e8f0; /* 添加分隔线 */
+            padding-bottom: 0.3rem;
+        }
+
+        .generated-id {
+            font-family: var(--font-family-mono);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            display: block;
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: white;
+            width: 500px;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            max-height: 85vh;
+        }
+
+        /* 新增：大尺寸弹窗（用于 Prompt 编辑） */
+        .modal-large {
+            width: 700px; /* 从 500px 增加到 700px */
+            max-width: 90%;
+            max-height: 90vh;
+        }
+
+        .modal-large .modal-body {
+            min-height: 400px; /* 增加最小高度 */
+        }
+
+        .modal-large textarea {
+            min-height: 300px; /* 文本框更大 */
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .modal h3 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding-right: 5px; /* For scrollbar */
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Skeleton Modal */
+        .skeleton-container {
+            display: flex;
+            height: 400px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f9fafb;
+        }
+
+        .skeleton-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            min-width: 0;
+        }
+
+        .skeleton-pane.source-pane {
+            border-right: 1px solid var(--border);
+        }
+
+        .pane-header {
+            padding: 10px 15px;
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .pane-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        /* List Items */
+        .sk-item {
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .sk-item:hover {
+            border-color: var(--primary);
+            background: #eef2ff;
+            transform: translateX(2px);
+        }
+
+        .sk-item.target-item {
+            background: #f0fdf4;
+            border-color: #86efac;
+            cursor: default;
+        }
+
+        .sk-item.target-item:hover {
+            transform: none;
+        }
+
+        .sk-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #64748b;
+            padding: 2px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--primary);
+        }
+
+        .icon-btn.delete:hover {
+            color: #ef4444;
+            background: #fee2e2;
+        }
+
+        .empty-grid {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-sub);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            animation: fadeUp 0.3s;
+            z-index: 200;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, 10px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        .markdown-body {
+            line-height: 1.4;
+            color: #334155;
+            padding: 1.5rem;
+            font-size: 0.9rem;
+            white-space: normal; /* 改为 normal，不保留原始换行 */
+        }
+
+        .markdown-body br {
+            display: block;
+            content: "";
+            margin: 0.3em 0; /* 控制 <br> 的间距 */
+        }
+
+        .markdown-body p {
+            margin-bottom: 0.6em;
+            margin-top: 0;
+        }
+
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+            margin-top: 0.8em; /* 从 1.5em 降低到 0.8em */
+            margin-bottom: 0.4em; /* 从 0.75em 降低到 0.4em */
+            color: #1e293b;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            line-height: 1.3; /* 添加标题行高控制 */
+        }
+
+        .markdown-body h1 {
+            font-size: 1.5em; /* 从 1.75em 降低 */
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.3em; /* 从 0.5em 降低 */
+        }
+
+        .markdown-body h2 {
+            font-size: 1.3em; /* 从 1.45em 降低 */
+        }
+
+        .markdown-body h3 {
+            font-size: 1.1em; /* 从 1.2em 降低 */
+        }
+
+        .markdown-body code {
+            background: #f1f5f9;
+            padding: 0.15em 0.4em; /* 从 0.25em 0.5em 降低 */
+            border-radius: 3px; /* 从 4px 降低 */
+            font-family: var(--font-family-mono);
+            font-size: 0.85em; /* 从 0.9em 降低 */
+            color: #e11d48;
+        }
+
+        .markdown-body pre {
+            background: #1e293b;
+            padding: 0.8rem; /* 从 1.25rem 降低 */
+            border-radius: 6px; /* 从 8px 降低 */
+            overflow: auto;
+            margin-bottom: 0.8em; /* 从 1.5em 降低 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 阴影减弱 */
+            line-height: 1.4; /* 添加代码块行高控制 */
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: #f1f5f9;
+            font-size: 0.85rem; /* 从 0.9rem 降低 */
+            line-height: 1.4; /* 添加行高控制 */
+        }
+
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 1.5em; /* 从 2em 降低 */
+            margin-bottom: 0.6em; /* 从 1.25em 降低 */
+            margin-top: 0.3em; /* 添加顶部间距控制 */
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.25em; /* 从 0.5em 降低到 0.25em */
+            line-height: 1.4; /* 添加列表项行高控制 */
+        }
+
+        .markdown-body strong {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* 添加：进一步压缩块级元素间距 */
+        .markdown-body > *:first-child {
+            margin-top: 0;
+        }
+
+        .markdown-body > *:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Full Preview Modal Specifics */
+        #fullPreviewModal .modal {
+            width: 850px; /* 从 800px 增加 */
+            height: 85vh;
+            max-width: 95%;
+        }
+
+        #fullPreviewModal .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            background: #fff;
+        }
+
+        .preview-toolbar {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            flex-shrink: 0;
+        }
+
+        .preview-toolbar h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+
+        .raw-view {
+            white-space: pre-wrap;
+            font-family: var(--font-family-mono);
+            font-size: 0.85rem; /* 从 0.9rem 降低 */
+            padding: 1.5rem; /* 从 2rem 降低 */
+            line-height: 1.5; /* 从 1.7 降低到 1.5 */
+            color: #334155;
+            background: #f8fafc;
+        }
+
+        /* Switch Toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Project Grid */
+        .project-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .project-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            cursor: pointer;
+            height: 200px; /* 增加到 200px */
+        }
+
+
+        .project-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: #eef2ff;
+            color: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+
+        .card-git {
+            font-size: 1rem;
+            color: #64748b;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-weight: 500;
+            background: transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: auto;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .card-meta {
+            margin-top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .btn-delete-card {
+            color: #cbd5e1;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .btn-delete-card:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        /* Prompt Card Actions */
+        .card-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 3;
+        }
+
+        .prompt-card:hover .card-actions {
+            opacity: 1;
+        }
+
+        .card-action-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: none;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+            padding: 0;
+        }
+
+        .card-action-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .card-action-btn.edit {
+            color: var(--primary);
+        }
+
+        .card-action-btn.edit:hover {
+            background: #eef2ff;
+        }
+
+        .card-action-btn.delete {
+            color: #ef4444;
+        }
+
+        .card-action-btn.delete:hover {
+            background: #fee2e2;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-sub);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
+        }
+
+        .input-label-required::after {
+            content: ' *';
+            color: #ef4444;
+        }
+
+        /* ==================== 标签页系统 ==================== */
+        .tabs-header {
+            display: flex;
+            background: white;
+            border-bottom: 2px solid var(--border);
+            padding: 0 1.5rem;
+            flex-shrink: 0;
+            min-height: 52px;
+            max-height: 52px;
+        }
+
+        .tab-item {
+            padding: 0 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-sub);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-item:hover {
+            color: var(--primary);
+            background: #f9fafb;
+        }
+
+        .tab-item.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* 标签页内容区 */
+        .tab-content {
+            display: none;
+            flex: 1;
+            min-height: 0; /* 重要：允许 flex 子项收缩 */
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 最终 Prompt 列表 */
+        .final-prompt-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: #f3f4f6;
+        }
+
+        /* Prompt Studio */
+        #promptStudio {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .final-prompt-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s;
+        }
+
+        .final-prompt-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .final-prompt-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .final-prompt-meta {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 1rem;
+        }
+
+        .final-prompt-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* 空状态样式 */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-sub);
+            padding: 3rem;
+        }
+
+        .empty-state svg {
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .uuid-code-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .uuid-code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            color: #666;
+            user-select: all; /* 方便选中 */
+        }
+
+        .btn-copy-uuid {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .btn-copy-uuid:hover {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-copy-uuid:active {
+            transform: scale(0.95);
+        }
+
+        /* 拖拽相关样式 */
+        .sk-item.target-item {
+            cursor: move;
+            user-select: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .sk-item.target-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+
+        .sk-item.target-item.drag-over {
+            border-top: 3px solid var(--primary);
+            background: #eef2ff;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="brand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            AI Prompt Hub
+        </div>
+        <div class="project-list" id="projectList"></div>
+    </nav>
+
+    <!-- Main -->
+    <main id="main">
+        <header id="mainHeader"></header>
+
+        <!-- 视图 1：首页 -->
+        <div id="dashboardView" class="view-container"></div>
+
+        <!-- 视图 2：所有项目 -->
+        <div id="allProjectsView" class="view-container">
+            <div class="dashboard-content"></div>
+        </div>
+
+        <!-- 视图 3：全局分类管理 -->
+        <div id="globalCategoriesView" class="view-container">
+            <div class="dashboard-content">
+                <h2 style="margin-bottom:1.5rem; color:var(--text-main);">全局分类管理</h2>
+                <div class="cat-input-group">
+                    <div class="input-group-item">
+                        <label class="input-group-label">新分类名称</label>
+                        <input type="text" id="viewCatInput" class="input" style="margin-bottom:0;"
+                               placeholder="例如：数据库配置规范"
+                               onkeydown="if(event.key==='Enter') addGlobalCategoryFromView()">
+                    </div>
+                    <button class="btn btn-primary" onclick="addGlobalCategoryFromView()" style="height:38px;">
+                        添加分类
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 80px;">ID</th>
+                            <th>分类名称</th>
+                            <th style="width: 160px;">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody id="globalCatTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视图 4：工作台（双标签页） -->
+        <div id="editorView" class="view-container" style="background:white; overflow:hidden;">
+            <!-- 标签页导航 -->
+            <div class="tabs-header">
+                <div class="tab-item active" id="tabListBtn" onclick="switchEditorTab('list')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/>
+                        <line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18"/>
+                    </svg>
+                    Prompt 列表
+                </div>
+                <div class="tab-item" id="tabCanvasBtn" onclick="switchEditorTab('canvas')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="9" y1="3" x2="9" y2="21"/>
+                    </svg>
+                    Prompt 画布
+                </div>
+            </div>
+
+            <!-- 标签页 1: 最终 Prompt 列表 -->
+            <div class="tab-content active" id="finalPromptListTab">
+                <div class="final-prompt-list" id="finalPromptList"></div>
+            </div>
+
+            <!-- 标签页 2: Prompt 画布 -->
+            <div class="tab-content" id="promptCanvasTab">
+                <div id="promptStudio" style="display: flex; height: 100%; width: 100%;">
+                    <div class="pane-left">
+                        <div class="toolbar">
+                            <div class="toolbar-title">
+                                <h2>Prompt 画布</h2>
+                                <p>勾选左侧卡片，右侧按分类排序生成</p>
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn btn-secondary" onclick="openSkeletonModal()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="8" y1="6" x2="21" y2="6"/>
+                                        <line x1="8" y1="12" x2="21" y2="12"/>
+                                        <line x1="8" y1="18" x2="21" y2="18"/>
+                                        <line x1="3" y1="6" x2="3.01" y2="6"/>
+                                        <line x1="3" y1="12" x2="3.01" y2="12"/>
+                                        <line x1="3" y1="18" x2="3.01" y2="18"/>
+                                    </svg>
+                                    配置提示词骨架
+                                </button>
+                                <button class="btn btn-primary" onclick="openPromptModal()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"/>
+                                        <line x1="5" y1="12" x2="19" y2="12"/>
+                                    </svg>
+                                    新增 Prompt
+                                </button>
+                            </div>
+                        </div>
+                        <div class="prompt-grid" id="promptGrid"></div>
+                    </div>
+                    <div class="pane-right">
+                        <div class="preview-content" id="previewContent"></div>
+                        <div class="preview-footer">
+                            <button class="btn btn-primary" style="width:100%" onclick="saveFinalPrompt()">
+                                保存 Prompt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ============ 弹窗 ============ -->
+
+<!-- 完整预览弹窗（画布用） -->
+<div class="modal-overlay" id="fullPreviewModal">
+    <div class="modal" style="width: 850px; height: 85vh; max-width: 95%;">
+        <div class="preview-toolbar">
+            <h3 style="margin:0;">Prompt 预览</h3>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:0.85rem; color:var(--text-sub);">Markdown 模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="markdownToggle" onchange="togglePreviewMode()">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-body" id="fullPreviewContent" style="flex:1; overflow-y:auto; padding:0;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="copyPreviewContent()">复制内容</button>
+            <button class="btn btn-secondary" onclick="closeModal('fullPreviewModal')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 最终 Prompt 预览弹窗 -->
+<div class="modal-overlay" id="previewFinalModal">
+    <div class="modal" style="width: 850px; height: 85vh; max-width: 95%;">
+        <div class="preview-toolbar">
+            <h3 style="margin:0;">Prompt 预览</h3>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:0.85rem; color:var(--text-sub);">Markdown 模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="previewMarkdownToggle" onchange="togglePreviewFinalMode()">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-body" id="previewFinalContent" style="flex:1; overflow-y:auto; padding:0;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="copyFinalContent()">复制内容</button>
+            <button class="btn btn-secondary" onclick="closeModal('previewFinalModal')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- Prompt 编辑弹窗 -->
+<div class="modal-overlay" id="promptModal">
+    <div class="modal modal-large">
+        <h3 id="promptModalTitle">新增 Prompt</h3>
+        <div class="modal-body">
+            <input type="hidden" id="editPromptId">
+            <label class="input-label input-label-required">标题</label>
+            <input type="text" id="promptTitle" class="input" placeholder="例如：强制使用 JDK 17"
+                   style="margin-bottom: 1rem;">
+            <label class="input-label input-label-required">所属分类</label>
+            <select id="promptCategory" class="input" style="margin-bottom: 1rem;"></select>
+            <label class="input-label input-label-required">Prompt 内容</label>
+            <textarea id="promptContent" class="input" rows="12"
+                      placeholder="输入具体的配置规范文本...&#10;&#10;提示：支持 Markdown 格式"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('promptModal')">取消</button>
+            <button class="btn btn-primary" onclick="savePrompt()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 项目编辑弹窗 -->
+<div class="modal-overlay" id="projectModal">
+    <div class="modal">
+        <h3 id="projectModalTitle">新增项目</h3>
+        <div class="modal-body">
+            <input type="hidden" id="editProjectId">
+            <label class="input-label input-label-required">项目名称</label>
+            <input type="text" id="projectName" class="input" placeholder="例如：电商后台管理系统"
+                   style="margin-bottom: 1rem;"
+                   onkeydown="if(event.key==='Enter') document.getElementById('projectGitRepo').focus()">
+            <label class="input-label input-label-required">Git 仓库地址</label>
+            <input type="text" id="projectGitRepo" class="input" placeholder="例如：git@github.com:username/project.git"
+                   style="margin-bottom: 0.5rem;" onkeydown="if(event.key==='Enter') saveProject()">
+            <div style="font-size:0.75rem; color:#94a3b8; padding: 0.5rem; background: #f8fafc; border-radius: 4px; border-left: 3px solid var(--primary);">
+                <div style="font-weight: 600; margin-bottom: 4px;">支持的 Git 地址格式：</div>
+                <div>• SSH: git@github.com:user/repo.git</div>
+                <div>• HTTPS: https://github.com/user/repo.git</div>
+                <div>• 本地: /path/to/repo.git</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('projectModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveProject()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 分类编辑弹窗 -->
+<div class="modal-overlay" id="editCategoryModal">
+    <div class="modal">
+        <h3 id="categoryModalTitle">编辑分类</h3>
+        <div class="modal-body">
+            <input type="hidden" id="editCategoryId">
+            <label class="input-label input-label-required">分类名称</label>
+            <input type="text" id="categoryName" class="input" placeholder="例如：数据库配置规范"
+                   onkeydown="if(event.key==='Enter') saveCategory()">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('editCategoryModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveCategory()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑名称弹窗 -->
+<div class="modal-overlay" id="editNameModal">
+    <div class="modal">
+        <h3>编辑名称</h3>
+        <div class="modal-body">
+            <input type="hidden" id="editNameId">
+            <label class="input-label input-label-required">新名称</label>
+            <input type="text" id="newPromptName" class="input" placeholder="例如：数智-2025-01-12 15:30:00"
+                   onkeydown="if(event.key==='Enter') savePromptName()">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('editNameModal')">取消</button>
+            <button class="btn btn-primary" onclick="savePromptName()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 骨架配置弹窗 -->
+<div class="modal-overlay" id="skeletonModal">
+    <div class="modal" style="width: 800px; max-width: 95%;">
+        <h3>配置提示词骨架 - <span id="skeletonProjectName"></span></h3>
+        <p style="font-size:0.85rem; color:var(--text-sub); margin-bottom:1rem;">
+            从左侧选择需要的分类加入右侧提示词骨架。拖拽调整生成顺序。
+        </p>
+        <div class="skeleton-container">
+            <div class="skeleton-pane source-pane">
+                <div class="pane-header">
+                    <span>全局分类库 (可选)</span>
+                    <input type="text" id="catSearch" class="input" placeholder="搜索分类..."
+                           style="padding: 4px 8px; font-size: 0.8rem; width: 140px;" oninput="renderSourceList()">
+                </div>
+                <div class="pane-list" id="sourceList"></div>
+            </div>
+            <div class="skeleton-pane target-pane">
+                <div class="pane-header">
+                    <span>提示词骨架 (已启用)</span>
+                    <span style="font-size:0.8rem; color:var(--primary);" id="skeletonCount">0 项</span>
+                </div>
+                <div class="pane-list" id="targetList"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('skeletonModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveSkeleton()">保存骨架配置</button>
+        </div>
+    </div>
+</div>
+
+<!-- 配置骨架弹窗（最终 Prompt 专用） -->
+<div class="modal-overlay" id="finalSkeletonModal">
+    <div class="modal" style="width: 800px; max-width: 95%;">
+        <h3>配置提示词模板骨架 - <span id="finalSkeletonTitle"></span></h3>
+        <p style="font-size:0.85rem; color:var(--text-sub); margin-bottom:1rem;">
+            从左侧选择需要的分类加入右侧提示词骨架。在右侧调整生成顺序（上移/下移）。
+        </p>
+        <div class="skeleton-container">
+            <div class="skeleton-pane source-pane">
+                <div class="pane-header">
+                    <span>全局分类库 (可选)</span>
+                    <input type="text" id="finalCatSearch" class="input" placeholder="搜索分类..."
+                           style="padding: 4px 8px; font-size: 0.8rem; width: 140px;" oninput="renderFinalSourceList()">
+                </div>
+                <div class="pane-list" id="finalSourceList"></div>
+            </div>
+            <div class="skeleton-pane target-pane">
+                <div class="pane-header">
+                    <span>提示词骨架 (已启用)</span>
+                    <span style="font-size:0.8rem; color:var(--primary);" id="finalSkeletonCount">0 items</span>
+                </div>
+                <div class="pane-list" id="finalTargetList"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <input type="hidden" id="editingFinalPromptId">
+            <button class="btn btn-secondary" onclick="closeModal('finalSkeletonModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveFinalSkeleton()">保存骨架配置</button>
+        </div>
+    </div>
+</div>
+<script>
+    // ==================== API 调用封装 ====================
+    const API_BASE = '/api';
+
+    async function fetchAPI(url, options = {}) {
+        try {
+            const response = await fetch(API_BASE + url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
+            });
+
+            if (!response.ok) {
+                try {
+                    const error = await response.json();
+                    throw new Error(error.message || '请求失败');
+                } catch (e) {
+                    throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+                }
+            }
+
+            // 处理空响应
+            if (response.status === 204) {
+                return null;
+            }
+
+            // 读取响应文本
+            const text = await response.text();
+
+            // 如果响应为空，返回 null
+            if (!text || text.trim() === '') {
+                return null;
+            }
+
+            // 尝试解析 JSON
+            try {
+                return JSON.parse(text);
+            } catch {
+                return null;
+            }
+
+        } catch (error) {
+            showToast('错误: ' + error.message);
+            throw error;
+        }
+    }
+
+    // ==================== 数据模型 ====================
+    let db = {
+        globalCategories: [],
+        projects: []
+    };
+    let currentView = 'dashboard';
+    let currentProjectId = null;
+    let currentProject = null;
+    let currentEditorTab = 'list';  // 'list' 或 'canvas'
+    let finalPrompts = [];  // 最终 Prompt 列表
+    let editingFinalSkeleton = [];  // 编辑中的骨架配置
+    let currentFinalPromptId = null;  // 当前编辑的最终 Prompt ID
+    // ==================== 初始化 ====================
+    async function init() {
+        await loadGlobalCategories();
+        await loadProjects();
+        renderProjectList();
+        switchToDashboard();
+    }
+
+    async function loadGlobalCategories() {
+        db.globalCategories = await fetchAPI('/categories');
+    }
+
+    async function loadProjects() {
+        db.projects = await fetchAPI('/projects');
+    }
+
+    async function loadCurrentProject() {
+        if (!currentProjectId) {
+            console.warn('No currentProjectId set');
+            return;
+        }
+
+        try {
+            // 先加载项目基本信息
+            const project = await fetchAPI(`/projects/${currentProjectId}`);
+
+            if (!project) {
+                showToast('项目不存在');
+                switchToDashboard();
+                return;
+            }
+
+            // 初始化 currentProject 对象
+            currentProject = {
+                id: project.id,
+                name: project.name,
+                gitRepo: project.gitRepo,
+                createdAt: project.createdAt,
+                updatedAt: project.updatedAt,
+                skeleton: [],
+                prompts: []
+            };
+
+            // 并行加载骨架和 Prompts（性能优化）
+            const [skeleton, prompts] = await Promise.allSettled([
+                fetchAPI(`/projects/${currentProjectId}/skeleton`),
+                fetchAPI(`/projects/${currentProjectId}/prompts`)
+            ]);
+
+            // 处理骨架数据
+            if (skeleton.status === 'fulfilled' && skeleton.value) {
+                currentProject.skeleton = skeleton.value;
+            } else {
+                console.error('Failed to load skeleton:', skeleton.reason);
+                currentProject.skeleton = [];
+            }
+
+            // 处理 Prompts 数据
+            if (prompts.status === 'fulfilled' && prompts.value) {
+                currentProject.prompts = prompts.value;
+            } else {
+                console.error('Failed to load prompts:', prompts.reason);
+                currentProject.prompts = [];
+            }
+
+            console.log('Project loaded:', currentProject);
+
+        } catch (error) {
+            console.error('Error loading project:', error);
+            showToast('加载项目失败');
+            switchToDashboard();
+        }
+    }
+
+    // ==================== 视图切换 ====================
+    function switchToDashboard() {
+        currentView = 'dashboard';
+        currentProjectId = null;
+        document.getElementById('dashboardView').style.display = 'flex';
+        document.getElementById('editorView').style.display = 'none';
+        document.getElementById('allProjectsView').style.display = 'none';
+        document.getElementById('globalCategoriesView').style.display = 'none';
+        renderProjectList();
+        renderDashboardHeader();
+        renderDashboardContent();
+    }
+
+    async function switchToAllProjects() {
+        currentView = 'allProjects';
+        currentProjectId = null;
+        document.getElementById('dashboardView').style.display = 'none';
+        document.getElementById('editorView').style.display = 'none';
+        document.getElementById('allProjectsView').style.display = 'flex';
+        document.getElementById('globalCategoriesView').style.display = 'none';
+        renderProjectList();
+        renderAllProjectsHeader();
+        renderDashboardGrid();
+    }
+
+    async function switchToGlobalCategories() {
+        currentView = 'globalCategories';
+        document.getElementById('dashboardView').style.display = 'none';
+        document.getElementById('editorView').style.display = 'none';
+        document.getElementById('allProjectsView').style.display = 'none';
+        document.getElementById('globalCategoriesView').style.display = 'flex';
+        renderProjectList();
+        renderGlobalCategoriesHeader();
+        renderGlobalCategoriesTable();
+    }
+
+    async function switchToEditor(projectId) {
+        if (!projectId) {
+            showToast('无效的项目 ID');
+            switchToDashboard();
+            return;
+        }
+
+        currentView = 'editor';
+        currentProjectId = projectId;
+        currentEditorTab = 'list';
+
+        // 隐藏其他视图
+        document.getElementById('dashboardView').style.display = 'none';
+        document.getElementById('allProjectsView').style.display = 'none';
+        document.getElementById('globalCategoriesView').style.display = 'none';
+
+        // 显示编辑器视图（使用 flex）
+        const editorView = document.getElementById('editorView');
+        editorView.style.display = 'flex'; // 改为 flex
+        editorView.classList.add('active'); // 添加 active 类
+
+        try {
+            await loadCurrentProject();
+            await loadFinalPrompts();
+
+            if (!currentProject) {
+                throw new Error('Project not found');
+            }
+
+            renderProjectList();
+            renderEditorHeader();
+            switchEditorTab('list');
+        } catch (error) {
+            console.error('Error switching to editor:', error);
+            showToast('加载项目失败，请重试');
+            switchToDashboard();
+        }
+    }
+
+    // ==================== 加载最终 Prompt 列表 ====================
+    async function loadFinalPrompts() {
+        if (!currentProjectId) return;
+        try {
+            finalPrompts = await fetchAPI(`/projects/${currentProjectId}/final-prompts`);
+        } catch (error) {
+            console.error('Error loading final prompts:', error);
+            finalPrompts = [];
+        }
+    }
+
+    // ==================== 标签页切换 ====================
+    function switchEditorTab(tab) {
+        currentEditorTab = tab;
+
+        // 更新标签按钮状态
+        document.getElementById('tabListBtn').classList.toggle('active', tab === 'list');
+        document.getElementById('tabCanvasBtn').classList.toggle('active', tab === 'canvas');
+
+        // 更新内容显示
+        document.getElementById('finalPromptListTab').classList.toggle('active', tab === 'list');
+        document.getElementById('promptCanvasTab').classList.toggle('active', tab === 'canvas');
+
+        if (tab === 'list') {
+            renderFinalPromptList();
+        } else {
+            renderGrid();
+            renderPreview();
+        }
+    }
+
+    // ==================== 渲染最终 Prompt 列表 ====================
+    function renderFinalPromptList() {
+        const container = document.getElementById('finalPromptList');
+
+        if (!finalPrompts || finalPrompts.length === 0) {
+            container.innerHTML = `
+            <div class="empty-state">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <h3 style="margin-bottom: 0.5rem;">暂无保存的 Prompt</h3>
+                <p>前往"Prompt 画布"标签页创建第一个Prompt</p>
+            </div>
+        `;
+            return;
+        }
+
+        container.innerHTML = '';
+
+        finalPrompts.forEach(fp => {
+            const div = document.createElement('div');
+            div.className = 'final-prompt-item';
+
+            const createdTime = new Date(fp.createdAt).toLocaleString('zh-CN');
+
+            div.innerHTML = `
+    <div class="final-prompt-name">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        ${escapeHtml(fp.name)}
+        <span class="uuid-code-wrapper">
+            <code class="uuid-code">${escapeHtml(fp.uuidCode)}</code>
+            <button class="btn-copy-uuid" onclick="copyUuidCode('${escapeHtml(fp.uuidCode)}')" title="复制UUID">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+            </button>
+        </span>
+    </div>
+    <div class="final-prompt-meta">
+        创建时间：${createdTime} | 包含 ${fp.promptIds.length} 个提示词块
+    </div>
+    <div class="final-prompt-actions">
+        <button class="btn btn-secondary" onclick="previewFinalPrompt(${fp.id})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+            预览
+        </button>
+        <button class="btn btn-secondary" onclick="openEditNameModal(${fp.id})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            编辑名称
+        </button>
+        <button class="btn btn-secondary" onclick="openFinalSkeletonModal(${fp.id})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"/>
+                <line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+            </svg>
+            配置提示词骨架
+        </button>
+        <button class="btn btn-secondary" onclick="copyFinalPromptContent(${fp.id})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            复制
+        </button>
+        <button class="btn btn-danger" onclick="deleteFinalPrompt(${fp.id})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            删除
+        </button>
+    </div>
+`;
+
+            container.appendChild(div);
+        });
+    }
+
+    function copyUuidCode(uuidCode) {
+        navigator.clipboard.writeText(uuidCode).then(() => {
+            // 显示复制成功提示
+            showToast('UUID 已复制到剪贴板', 'success');
+        }).catch(err => {
+            console.error('复制失败:', err);
+            showToast('复制失败，请手动复制', 'error');
+        });
+    }
+
+    // ==================== 保存最终 Prompt ====================
+    async function saveFinalPrompt() {
+        if (!currentProject || !currentProject.prompts) {
+            showToast('请先加载项目数据');
+            return;
+        }
+
+        const selectedPromptIds = currentProject.prompts
+            .filter(p => p.isSelected)
+            .map(p => p.id);
+
+        if (selectedPromptIds.length === 0) {
+            showToast('请至少勾选一个 Prompt');
+            return;
+        }
+
+        try {
+            const result = await fetchAPI(`/projects/${currentProjectId}/final-prompts`, {
+                method: 'POST',
+                body: JSON.stringify({promptIds: selectedPromptIds})
+            });
+
+            showToast('Prompt 已保存');
+
+            // 重新加载最终 Prompt 列表
+            await loadFinalPrompts();
+
+            // 切换到列表标签页
+            switchEditorTab('list');
+
+        } catch (error) {
+            console.error('Error saving final prompt:', error);
+        }
+    }
+
+    // ==================== 预览最终 Prompt ====================
+    async function previewFinalPrompt(id) {
+        try {
+            const result = await fetchAPI(`/projects/${currentProjectId}/final-prompts/${id}/assemble`);
+
+            document.getElementById('previewFinalContent').innerHTML =
+                `<div class="raw-view">${escapeHtml(result.content)}</div>`;
+            document.getElementById('previewMarkdownToggle').checked = false;
+            document.getElementById('previewFinalModal').classList.add('open');
+
+        } catch (error) {
+            console.error('Error previewing final prompt:', error);
+        }
+    }
+
+    function togglePreviewFinalMode() {
+        const isMarkdown = document.getElementById('previewMarkdownToggle').checked;
+        const container = document.getElementById('previewFinalContent');
+        const rawContent = container.querySelector('.raw-view')?.textContent ||
+            container.querySelector('.markdown-body')?.getAttribute('data-raw') || '';
+
+        if (isMarkdown) {
+            const parsed = parseMarkdown(rawContent);
+            container.innerHTML = parsed;
+            container.querySelector('.markdown-body')?.setAttribute('data-raw', rawContent);
+        } else {
+            container.innerHTML = `<div class="raw-view">${escapeHtml(rawContent)}</div>`;
+        }
+    }
+
+    // ==================== 复制最终 Prompt ====================
+    async function copyFinalPromptContent(id) {
+        try {
+            const result = await fetchAPI(`/projects/${currentProjectId}/final-prompts/${id}/assemble`);
+            await navigator.clipboard.writeText(result.content);
+            showToast('内容已复制到剪贴板');
+        } catch (error) {
+            console.error('Error copying final prompt:', error);
+        }
+    }
+
+    async function copyFinalContent() {
+        const content = document.getElementById('previewFinalContent').textContent;
+        await navigator.clipboard.writeText(content);
+        showToast('内容已复制到剪贴板');
+    }
+
+    // ==================== 编辑名称 ====================
+    function openEditNameModal(id) {
+        const fp = finalPrompts.find(p => p.id === id);
+        if (!fp) {
+            showToast('Prompt 不存在');
+            return;
+        }
+
+        document.getElementById('editNameId').value = id;
+        document.getElementById('newPromptName').value = fp.name;
+        document.getElementById('editNameModal').classList.add('open');
+
+        setTimeout(() => {
+            document.getElementById('newPromptName').focus();
+            document.getElementById('newPromptName').select();
+        }, 100);
+    }
+
+    async function savePromptName() {
+        const id = document.getElementById('editNameId').value;
+        const newName = document.getElementById('newPromptName').value.trim();
+
+        if (!newName) {
+            showToast('请输入名称');
+            document.getElementById('newPromptName').focus();
+            return;
+        }
+
+        try {
+            await fetchAPI(`/projects/${currentProjectId}/final-prompts/${id}/name`, {
+                method: 'PUT',
+                body: JSON.stringify({name: newName})
+            });
+
+            closeModal('editNameModal');
+            await loadFinalPrompts();
+            renderFinalPromptList();
+            showToast('名称已更新');
+
+        } catch (error) {
+            console.error('Error updating name:', error);
+        }
+    }
+
+    // ==================== 配置骨架（最终 Prompt） ====================
+    async function openFinalSkeletonModal(id) {
+        currentFinalPromptId = id;
+        const fp = finalPrompts.find(p => p.id === id);
+
+        if (!fp) {
+            showToast('Prompt 不存在');
+            return;
+        }
+
+        document.getElementById('editingFinalPromptId').value = id;
+        document.getElementById('finalSkeletonTitle').innerText = fp.name;
+
+        // 加载当前骨架
+        editingFinalSkeleton = fp.skeletons.map(s => ({
+            catId: s.category.id,
+            sort: s.sortOrder
+        }));
+
+        renderFinalSourceList();
+        renderFinalTargetList();
+        document.getElementById('finalSkeletonModal').classList.add('open');
+    }
+
+    function renderFinalSourceList() {
+        const container = document.getElementById('finalSourceList');
+        container.innerHTML = '';
+        const searchText = document.getElementById('finalCatSearch').value.toLowerCase();
+        const activeIds = new Set(editingFinalSkeleton.map(s => s.catId));
+
+        db.globalCategories.forEach(cat => {
+            if (activeIds.has(cat.id)) return;
+            if (searchText && !cat.name.toLowerCase().includes(searchText)) return;
+
+            const div = document.createElement('div');
+            div.className = 'sk-item';
+            div.innerHTML = `<span>${cat.name}</span> <span style="color:#cbd5e1">+</span>`;
+            div.onclick = () => addToFinalSkeleton(cat.id);
+            container.appendChild(div);
+        });
+
+        if (container.innerHTML === '') {
+            container.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:0.85rem; padding:20px;">无可用分类</div>';
+        }
+    }
+
+    function addToFinalSkeleton(catId) {
+        editingFinalSkeleton.push({catId: catId, sort: editingFinalSkeleton.length + 1});
+        renderFinalSourceList();
+        renderFinalTargetList();
+    }
+
+    function renderFinalTargetList() {
+        const container = document.getElementById('finalTargetList');
+        container.innerHTML = '';
+        document.getElementById('finalSkeletonCount').innerText = `${editingFinalSkeleton.length} 项`;
+
+        if (editingFinalSkeleton.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:0.85rem; padding:20px;">骨架为空，请从左侧添加</div>';
+            return;
+        }
+
+        editingFinalSkeleton.forEach((item, index) => {
+            const cat = db.globalCategories.find(c => c.id === item.catId);
+            if (!cat) return;
+
+            const div = document.createElement('div');
+            div.className = 'sk-item target-item';
+            div.draggable = true;
+            div.dataset.index = index;
+            div.dataset.isFinal = 'true'; // 标记是最终骨架
+
+            div.innerHTML = `
+            <span style="display:flex; align-items:center; gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.4;">
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+                <span style="font-weight:500;">${index + 1}. ${cat.name}</span>
+            </span>
+            <div class="sk-controls">
+                <button class="icon-btn delete" onclick="removeFromFinalSkeleton(${index})" title="移除">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>`;
+
+            // 添加拖拽事件
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('drop', handleDrop);
+            div.addEventListener('dragend', handleDragEnd);
+            div.addEventListener('dragleave', handleDragLeave);
+
+            container.appendChild(div);
+        });
+    }
+
+    function removeFromFinalSkeleton(index) {
+        editingFinalSkeleton.splice(index, 1);
+        editingFinalSkeleton.forEach((item, idx) => item.sort = idx + 1);
+        renderFinalSourceList();
+        renderFinalTargetList();
+    }
+
+    function moveFinalItem(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= editingFinalSkeleton.length) return;
+        [editingFinalSkeleton[index], editingFinalSkeleton[newIndex]] =
+            [editingFinalSkeleton[newIndex], editingFinalSkeleton[index]];
+        editingFinalSkeleton.forEach((item, idx) => item.sort = idx + 1);
+        renderFinalTargetList();
+    }
+
+    // ==================== 拖拽处理 ====================
+    let draggedElement = null;
+    let draggedIndex = null;
+
+    function handleDragStart(e) {
+        draggedElement = e.currentTarget;
+        draggedIndex = parseInt(draggedElement.dataset.index);
+        draggedElement.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+
+        const targetElement = e.currentTarget;
+        if (targetElement !== draggedElement) {
+            targetElement.classList.add('drag-over');
+        }
+
+        return false;
+    }
+
+    function handleDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        const targetElement = e.currentTarget;
+        targetElement.classList.remove('drag-over');
+
+        if (draggedElement !== targetElement) {
+            const targetIndex = parseInt(targetElement.dataset.index);
+            const isFinal = targetElement.dataset.isFinal === 'true';
+
+            // 根据是否是最终骨架选择不同的数组
+            const skeleton = isFinal ? editingFinalSkeleton : editingSkeleton;
+
+            // 移动元素
+            const draggedItem = skeleton[draggedIndex];
+            skeleton.splice(draggedIndex, 1);
+            skeleton.splice(targetIndex, 0, draggedItem);
+
+            // 重新设置排序
+            skeleton.forEach((item, idx) => item.sort = idx + 1);
+
+            // 重新渲染
+            if (isFinal) {
+                renderFinalSourceList();
+                renderFinalTargetList();
+            } else {
+                renderSourceList();
+                renderTargetList();
+            }
+        }
+
+        return false;
+    }
+
+    function handleDragEnd(e) {
+        e.currentTarget.classList.remove('dragging');
+
+        // 清除所有拖拽样式
+        document.querySelectorAll('.sk-item.target-item').forEach(item => {
+            item.classList.remove('drag-over');
+        });
+
+        draggedElement = null;
+        draggedIndex = null;
+    }
+
+    async function saveFinalSkeleton() {
+        const id = document.getElementById('editingFinalPromptId').value;
+        const categoryIds = editingFinalSkeleton.map(s => s.catId);
+
+        try {
+            await fetchAPI(`/projects/${currentProjectId}/final-prompts/${id}/skeleton`, {
+                method: 'PUT',
+                body: JSON.stringify(categoryIds)
+            });
+
+            closeModal('finalSkeletonModal');
+            await loadFinalPrompts();
+            renderFinalPromptList();
+            showToast('骨架配置已更新');
+
+        } catch (error) {
+            console.error('Error saving final skeleton:', error);
+        }
+    }
+
+    // ==================== 删除最终 Prompt ====================
+    async function deleteFinalPrompt(id) {
+        const fp = finalPrompts.find(p => p.id === id);
+        if (!fp) {
+            showToast('Prompt 不存在');
+            return;
+        }
+
+        if (!confirm(`确定删除 "${fp.name}" 吗？`)) {
+            return;
+        }
+
+        try {
+            await fetchAPI(`/projects/${currentProjectId}/final-prompts/${id}`, {
+                method: 'DELETE'
+            });
+
+            await loadFinalPrompts();
+            renderFinalPromptList();
+            showToast('Prompt 已删除');
+
+        } catch (error) {
+            console.error('Error deleting final prompt:', error);
+        }
+    }
+
+    // ==================== 侧边栏渲染 ====================
+    function renderProjectList() {
+        const list = document.getElementById('projectList');
+        list.innerHTML = '';
+
+        // 首页
+        const homeItem = document.createElement('div');
+        homeItem.className = `project-item ${currentView === 'dashboard' ? 'active' : ''}`;
+        homeItem.innerHTML = `<span style="display:flex; align-items:center; gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>首页</span>`;
+        homeItem.onclick = () => switchToDashboard();
+        list.appendChild(homeItem);
+
+        // 所有项目
+        const allProjectsItem = document.createElement('div');
+        allProjectsItem.className = `project-item ${currentView === 'allProjects' ? 'active' : ''}`;
+        allProjectsItem.innerHTML = `<span style="display:flex; align-items:center; gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>所有项目</span>`;
+        allProjectsItem.onclick = () => switchToAllProjects();
+        list.appendChild(allProjectsItem);
+
+        // 全局分类
+        const globalCatItem = document.createElement('div');
+        globalCatItem.className = `project-item ${currentView === 'globalCategories' ? 'active' : ''}`;
+        globalCatItem.innerHTML = `<span style="display:flex; align-items:center; gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>全局分类定义</span>`;
+        globalCatItem.onclick = () => switchToGlobalCategories();
+        list.appendChild(globalCatItem);
+    }
+
+    // ==================== 头部渲染 ====================
+    function renderDashboardHeader() {
+        document.getElementById('mainHeader').innerHTML = `<div class="breadcrumb"><span style="font-weight:600; font-size:1.1rem;">首页</span></div>`;
+    }
+
+    function renderAllProjectsHeader() {
+        document.getElementById('mainHeader').innerHTML = `
+        <div class="breadcrumb"><span style="font-weight:600; font-size:1.1rem;">所有项目</span></div>
+        <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="createNewProject()">+ 新增项目</button></div>`;
+    }
+
+    function renderGlobalCategoriesHeader() {
+        document.getElementById('mainHeader').innerHTML = `
+            <div class="breadcrumb">
+                <span>全局分类定义</span>
+            </div>
+        `;
+    }
+
+    function renderEditorHeader() {
+        if (!currentProject) return;
+        document.getElementById('mainHeader').innerHTML = `
+        <div class="breadcrumb">
+            <span style="cursor:pointer; color:var(--text-sub); margin-right:8px;" onclick="switchToAllProjects()">所有项目</span>
+            <span>/</span>
+            <span style="margin-left:8px; font-weight:600; color:var(--text-main);">${currentProject.name}</span>
+        </div>
+        <button class="btn btn-danger" onclick="deleteCurrentProject()">删除项目</button>`;
+    }
+
+    // ==================== 内容渲染 ====================
+    function renderDashboardContent() {
+        document.getElementById('dashboardView').innerHTML = `
+        <div class="dashboard-content" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" style="margin-bottom:2rem;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <h1 style="font-size:2rem; margin-bottom:1rem; color:var(--text-main);">欢迎使用 AI Prompt Hub</h1>
+            <p style="font-size:1rem; color:var(--text-sub); margin-bottom:2rem;">统一管理和编排你的 AI Prompt 模板</p>
+            <div style="display:flex; gap:1rem;">
+                <button class="btn btn-primary" onclick="switchToAllProjects()">查看所有项目</button>
+                <button class="btn btn-secondary" onclick="createNewProject()">创建新项目</button>
+            </div>
+        </div>`;
+    }
+
+    function renderDashboardGrid() {
+        const container = document.querySelector('#allProjectsView .dashboard-content');
+        container.innerHTML = '<div class="project-grid-container" id="projectGrid"></div>';
+        const grid = document.getElementById('projectGrid');
+
+        if (db.projects.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:4rem; color:var(--text-sub);">暂无项目，点击右上角创建</div>`;
+            return;
+        }
+
+        db.projects.forEach(p => {
+            // 从 Git 路径提取项目名
+            const gitProjectName = extractGitProjectName(p.gitRepo);
+
+            const div = document.createElement('div');
+            div.className = 'project-card';
+            div.onclick = (e) => {
+                if (e.target.closest('.btn-delete-card')) return;
+                switchToEditor(p.id);
+            };
+            div.innerHTML = `
+<div class="card-top">
+    <div class="card-icon">${p.name.charAt(0).toUpperCase()}</div>
+    <div style="display: flex; gap: 4px;">
+        <div class="btn-delete-card" onclick="openProjectModal(${p.id}); event.stopPropagation();"
+             title="编辑项目" style="color: #94a3b8;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+        </div>
+        <div class="btn-delete-card" onclick="deleteProjectFromDash(${p.id}); event.stopPropagation();" title="删除项目">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+        </div>
+    </div>
+</div>
+<div class="card-title" title="${p.name}">${p.name}</div>
+<div class="card-git" title="${p.gitRepo || ''}">
+    ${gitProjectName ? `${gitProjectName}` : 'No Git Repo'}
+</div>
+<div class="card-meta"><span>点击进入编辑 &rarr;</span></div>`;
+            grid.appendChild(div);
+        });
+    }
+
+    function extractGitProjectName(gitRepo) {
+        if (!gitRepo) return '';
+
+        // 处理各种 Git URL 格式
+        // git@github.com:user/project.git
+        // https://github.com/user/project.git
+        // /path/to/project.git
+
+        let projectName = gitRepo;
+
+        // 移除 .git 后缀
+        projectName = projectName.replace(/\.git$/, '');
+
+        // 提取最后一个路径分隔符后的内容
+        const parts = projectName.split(/[\/:]/).filter(p => p.length > 0);
+        projectName = parts[parts.length - 1];
+
+        return projectName;
+    }
+
+    // ==================== 全局分类管理 ====================
+    function renderGlobalCategoriesTable() {
+        const tbody = document.getElementById('globalCatTableBody');
+        tbody.innerHTML = '';
+
+        if (db.globalCategories.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 2rem; color:var(--text-sub);">暂无分类数据，请使用上方输入框添加</td></tr>';
+            return;
+        }
+
+        db.globalCategories.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+            <td style="font-family:monospace; color:var(--text-sub);">${c.id}</td>
+            <td style="font-weight:500;">${escapeHtml(c.name)}</td>
+            <td>
+                <div style="display:flex; gap:8px; align-items:center; white-space:nowrap;">
+                    <button class="btn btn-ghost" style="padding:6px 12px; font-size:0.85rem;"
+                            onclick="openEditCategoryModal(${c.id})">编辑</button>
+                    <button class="btn btn-danger-text" style="padding:6px 12px; font-size:0.85rem;"
+                            onclick="deleteGlobalCategory(${c.id})">删除</button>
+                </div>
+            </td>
+        `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openEditCategoryModal(id) {
+        const category = db.globalCategories.find(c => c.id === id);
+        if (!category) {
+            showToast('分类不存在');
+            return;
+        }
+
+        document.getElementById('categoryModalTitle').innerText = "编辑分类";
+        document.getElementById('editCategoryId').value = category.id;
+        document.getElementById('categoryName').value = category.name;
+        document.getElementById('editCategoryModal').classList.add('open');
+
+        // 聚焦到输入框
+        setTimeout(() => {
+            document.getElementById('categoryName').focus();
+            document.getElementById('categoryName').select();
+        }, 100);
+    }
+
+
+    async function addGlobalCategoryFromView() {
+        const input = document.getElementById('viewCatInput');
+        const name = input.value.trim();
+
+        if (!name) {
+            showToast('请输入分类名称');
+            input.focus();
+            return;
+        }
+
+        try {
+            await fetchAPI('/categories', {
+                method: 'POST',
+                body: JSON.stringify({name})
+            });
+
+            input.value = '';
+            await loadGlobalCategories();
+            renderGlobalCategoriesTable();
+            showToast('分类已添加');
+        } catch (error) {
+            // 错误已在 fetchAPI 中处理
+        }
+    }
+
+    async function saveCategory() {
+        const id = document.getElementById('editCategoryId').value;
+        const name = document.getElementById('categoryName').value.trim();
+
+        if (!name) {
+            showToast('请输入分类名称');
+            document.getElementById('categoryName').focus();
+            return;
+        }
+
+        try {
+            if (id) {
+                // 编辑
+                await fetchAPI(`/categories/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({name})
+                });
+                showToast('分类已更新');
+            } else {
+                // 新增
+                await fetchAPI('/categories', {
+                    method: 'POST',
+                    body: JSON.stringify({name})
+                });
+                showToast('分类已添加');
+            }
+
+            closeModal('editCategoryModal');
+            await loadGlobalCategories();
+            renderGlobalCategoriesTable();
+
+            // 如果在编辑器视图，刷新相关数据
+            if (currentView === 'editor' && currentProjectId) {
+                await loadCurrentProject();
+                renderGrid();
+                renderPreview();
+            }
+        } catch (error) {
+            // 错误已在 fetchAPI 中处理
+        }
+    }
+
+    async function deleteGlobalCategory(id) {
+        const cat = db.globalCategories.find(c => c.id === id);
+        if (!cat) {
+            showToast('分类不存在');
+            return;
+        }
+
+        if (!confirm(`确定删除全局分类 "${cat.name}" 吗？\n\n这将同时从所有项目的骨架和 Prompt 中移除该分类。`)) {
+            return;
+        }
+
+        try {
+            await fetchAPI(`/categories/${id}`, {method: 'DELETE'});
+            await loadGlobalCategories();
+            renderGlobalCategoriesTable();
+            showToast('分类已删除');
+
+            // 如果在编辑器视图，刷新相关数据
+            if (currentView === 'editor' && currentProjectId) {
+                await loadCurrentProject();
+                renderGrid();
+                renderPreview();
+            }
+        } catch (error) {
+            // 错误已在 fetchAPI 中处理
+        }
+    }
+
+    // ==================== 项目管理 ====================
+    function openProjectModal(editId = null) {
+        if (editId) {
+            const project = db.projects.find(p => p.id === editId);
+            document.getElementById('projectModalTitle').innerText = "编辑项目";
+            document.getElementById('editProjectId').value = project.id;
+            document.getElementById('projectName').value = project.name;
+            document.getElementById('projectGitRepo').value = project.gitRepo || '';
+        } else {
+            document.getElementById('projectModalTitle').innerText = "新增项目";
+            document.getElementById('editProjectId').value = "";
+            document.getElementById('projectName').value = "";
+            document.getElementById('projectGitRepo').value = "";
+        }
+
+        document.getElementById('projectModal').classList.add('open');
+
+        // 聚焦到项目名称输入框
+        setTimeout(() => {
+            document.getElementById('projectName').focus();
+        }, 100);
+    }
+
+    async function saveProject() {
+        const id = document.getElementById('editProjectId').value;
+        const name = document.getElementById('projectName').value.trim();
+        const gitRepo = document.getElementById('projectGitRepo').value.trim();
+
+        // 验证
+        if (!name) {
+            showToast('请输入项目名称');
+            document.getElementById('projectName').focus();
+            return;
+        }
+
+        if (!gitRepo) {
+            showToast('请输入 Git 仓库地址');
+            document.getElementById('projectGitRepo').focus();
+            return;
+        }
+
+        // 简单的 Git 地址格式验证
+        const gitPatterns = [
+            /^git@[\w\.-]+:[\w\/-]+\.git$/,           // SSH: git@github.com:user/repo.git
+            /^https?:\/\/[\w\.-]+\/[\w\/-]+\.git$/,   // HTTPS: https://github.com/user/repo.git
+            /^[\w\/-]+\.git$/,                         // 简单路径: path/to/repo.git
+            /^\/[\w\/-]+\.git$/                        // 绝对路径: /path/to/repo.git
+        ];
+
+        const isValidGit = gitPatterns.some(pattern => pattern.test(gitRepo));
+        if (!isValidGit) {
+            const confirm = window.confirm(
+                'Git 地址格式可能不正确。\n\n常见格式：\n' +
+                '• git@github.com:user/repo.git\n' +
+                '• https://github.com/user/repo.git\n\n' +
+                '是否继续保存？'
+            );
+            if (!confirm) return;
+        }
+
+        try {
+            let project;
+            if (id) {
+                // 编辑项目
+                project = await fetchAPI(`/projects/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({name, gitRepo})
+                });
+                showToast('项目已更新');
+            } else {
+                // 新增项目
+                project = await fetchAPI('/projects', {
+                    method: 'POST',
+                    body: JSON.stringify({name, gitRepo})
+                });
+                showToast('项目已创建');
+            }
+
+            closeModal('projectModal');
+            await loadProjects();
+
+            if (id) {
+                // 如果是编辑，刷新当前视图
+                if (currentView === 'editor' && currentProjectId == id) {
+                    await loadCurrentProject();
+                    renderEditorHeader();
+                } else if (currentView === 'allProjects') {
+                    renderDashboardGrid();
+                }
+            } else {
+                // 如果是新增，切换到编辑器并打开骨架配置
+                switchToEditor(project.id);
+                setTimeout(() => {
+                    openSkeletonModal();
+                }, 300);
+            }
+        } catch (error) {
+            // 错误已在 fetchAPI 中处理
+        }
+    }
+
+    // 简化原来的 createNewProject 函数
+    async function createNewProject() {
+        openProjectModal();
+    }
+
+    async function deleteCurrentProject() {
+        if (!currentProjectId) return;
+        if (!confirm("确定删除当前项目吗？")) return;
+
+        await fetchAPI(`/projects/${currentProjectId}`, {method: 'DELETE'});
+        await loadProjects();
+        switchToDashboard();
+    }
+
+    async function deleteProjectFromDash(id) {
+        event.stopPropagation();
+        if (!confirm("确定删除该项目吗？")) return;
+
+        await fetchAPI(`/projects/${id}`, {method: 'DELETE'});
+        await loadProjects();
+
+        if (currentProjectId === id) {
+            switchToDashboard();
+        } else {
+            renderDashboardGrid();
+        }
+    }
+
+    // ==================== 骨架配置 ====================
+    let editingSkeleton = [];
+
+    async function openSkeletonModal() {
+        // 设置项目名称显示
+        if (currentProject) {
+            document.getElementById('skeletonProjectName').innerText = currentProject.name;
+        }
+
+        const skeletons = await fetchAPI(`/projects/${currentProjectId}/skeleton`);
+        editingSkeleton = skeletons.map(s => ({
+            catId: s.category.id,
+            sort: s.sortOrder
+        }));
+
+        renderSourceList();
+        renderTargetList();
+        document.getElementById('skeletonModal').classList.add('open');
+    }
+
+    function renderSourceList() {
+        const container = document.getElementById('sourceList');
+        container.innerHTML = '';
+        const searchText = document.getElementById('catSearch').value.toLowerCase();
+        const activeIds = new Set(editingSkeleton.map(s => s.catId));
+
+        db.globalCategories.forEach(cat => {
+            if (activeIds.has(cat.id)) return;
+            if (searchText && !cat.name.toLowerCase().includes(searchText)) return;
+
+            const div = document.createElement('div');
+            div.className = 'sk-item';
+            div.innerHTML = `<span>${cat.name}</span> <span style="color:#cbd5e1">+</span>`;
+            div.onclick = () => addToSkeleton(cat.id);
+            container.appendChild(div);
+        });
+
+        if (container.innerHTML === '') {
+            container.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:0.85rem; padding:20px;">无可用分类</div>';
+        }
+    }
+
+    function addToSkeleton(catId) {
+        editingSkeleton.push({catId: catId, sort: editingSkeleton.length + 1});
+        renderSourceList();
+        renderTargetList();
+    }
+
+    function renderTargetList() {
+        const container = document.getElementById('targetList');
+        container.innerHTML = '';
+        document.getElementById('skeletonCount').innerText = `${editingSkeleton.length} 项`;
+
+        if (editingSkeleton.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:0.85rem; padding:20px;">骨架为空，请从左侧添加</div>';
+            return;
+        }
+
+        editingSkeleton.forEach((item, index) => {
+            const cat = db.globalCategories.find(c => c.id === item.catId);
+            if (!cat) return;
+
+            const div = document.createElement('div');
+            div.className = 'sk-item target-item';
+            div.draggable = true;
+            div.dataset.index = index;
+
+            div.innerHTML = `
+            <span style="display:flex; align-items:center; gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.4;">
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+                <span style="font-weight:500;">${index + 1}. ${cat.name}</span>
+            </span>
+            <div class="sk-controls">
+                <button class="icon-btn delete" onclick="removeFromSkeleton(${index})" title="移除">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>`;
+
+            // 添加拖拽事件
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('drop', handleDrop);
+            div.addEventListener('dragend', handleDragEnd);
+            div.addEventListener('dragleave', handleDragLeave);
+
+            container.appendChild(div);
+        });
+    }
+
+    function removeFromSkeleton(index) {
+        editingSkeleton.splice(index, 1);
+        editingSkeleton.forEach((item, idx) => item.sort = idx + 1);
+        renderSourceList();
+        renderTargetList();
+    }
+
+    function moveItem(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= editingSkeleton.length) return;
+        [editingSkeleton[index], editingSkeleton[newIndex]] = [editingSkeleton[newIndex], editingSkeleton[index]];
+        editingSkeleton.forEach((item, idx) => item.sort = idx + 1);
+        renderTargetList();
+    }
+
+    async function saveSkeleton() {
+        const categoryIds = editingSkeleton.map(s => s.catId);
+
+        await fetchAPI(`/projects/${currentProjectId}/skeleton`, {
+            method: 'PUT',
+            body: JSON.stringify(categoryIds)
+        });
+
+        closeModal('skeletonModal');
+        await loadCurrentProject();
+        renderGrid();
+        renderPreview();
+        showToast('骨架配置已更新');
+    }
+
+    // ==================== Prompt Grid 渲染 ====================
+    function renderGrid() {
+        const container = document.getElementById('promptGrid');
+
+        if (!container) {
+            console.error('promptGrid container not found');
+            return;
+        }
+
+        container.innerHTML = '';
+
+        if (!currentProject) {
+            container.innerHTML = `<div class="empty-grid">项目数据加载失败</div>`;
+            return;
+        }
+
+        if (!currentProject.prompts || currentProject.prompts.length === 0) {
+            container.innerHTML = `<div class="empty-grid">该项目暂无 Prompt。<br>请先点击"配置提示词骨架"，然后新增 Prompt。</div>`;
+            return;
+        }
+
+        currentProject.prompts.forEach(prompt => {
+            const cat = db.globalCategories.find(c => c.id === prompt.category.id);
+            const catName = cat ? cat.name : "未知分类";
+            const isSelected = prompt.isSelected;
+
+            const card = document.createElement('div');
+            card.className = `prompt-card ${isSelected ? 'selected' : ''}`;
+            card.onclick = (e) => {
+                // 如果点击的是操作按钮，不触发选择
+                if (e.target.closest('.card-actions')) return;
+                toggleSelection(prompt.id, e);
+            };
+
+            card.innerHTML = `
+            <div class="checkbox-wrap"><div class="custom-check"></div></div>
+            <div class="card-tag">${escapeHtml(catName)}</div>
+            <div class="card-actions">
+                <button class="card-action-btn edit" onclick="editPromptCard(${prompt.id}); event.stopPropagation();" title="编辑">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                </button>
+                <button class="card-action-btn delete" onclick="deletePromptCard(${prompt.id}); event.stopPropagation();" title="删除">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="card-title">${escapeHtml(prompt.title)}</div>
+            <div class="card-content">${escapeHtml(prompt.content)}</div>
+        `;
+            container.appendChild(card);
+        });
+    }
+
+    // 编辑 Prompt 卡片
+    function editPromptCard(promptId) {
+        openPromptModal(promptId);
+    }
+
+    // 删除 Prompt 卡片
+    async function deletePromptCard(promptId) {
+        const prompt = currentProject.prompts.find(p => p.id === promptId);
+        if (!prompt) {
+            showToast('Prompt 不存在');
+            return;
+        }
+
+        if (!confirm(`确定删除 Prompt "${prompt.title}" 吗？`)) {
+            return;
+        }
+
+        try {
+            await fetchAPI(`/projects/${currentProjectId}/prompts/${promptId}`, {
+                method: 'DELETE'
+            });
+
+            await loadCurrentProject();
+            renderGrid();
+            renderPreview();
+            showToast('Prompt 已删除');
+        } catch (error) {
+            // 错误已在 fetchAPI 中处理
+        }
+    }
+
+    async function toggleSelection(id, event) {
+        event.stopPropagation();
+
+        try {
+            // 找到对应的 prompt
+            const prompt = currentProject.prompts.find(p => p.id === id);
+            if (!prompt) return;
+
+            // 乐观更新：先修改本地状态
+            prompt.isSelected = !prompt.isSelected;
+
+            // 只更新当前卡片的视觉状态
+            const card = event.currentTarget;
+            if (prompt.isSelected) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+
+            // 立即更新预览
+            renderPreview();
+
+            // 异步同步到后端（不阻塞 UI）
+            fetchAPI(`/projects/${currentProjectId}/prompts/${id}/toggle`, {
+                method: 'PATCH'
+            }).catch(async (error) => {
+                // 如果后端同步失败，回滚状态
+                console.error('Toggle failed, rolling back:', error);
+                await loadCurrentProject();
+                renderGrid();
+                renderPreview();
+            });
+
+        } catch (error) {
+            console.error('Toggle selection error:', error);
+            showToast('操作失败，请重试');
+        }
+    }
+
+    // ==================== 预览渲染 ====================
+    async function renderPreview() {
+        const container = document.getElementById('previewContent');
+
+        if (!container) {
+            console.error('previewContent container not found');
+            return;
+        }
+
+        if (!currentProject) {
+            container.innerHTML = `<div style="text-align:center; padding-top:2rem; color:#ef4444; font-size:0.9rem;">项目数据加载失败</div>`;
+            document.getElementById('generatedId').innerText = "ID: --";
+            return;
+        }
+
+        if (!currentProject.prompts) {
+            container.innerHTML = `<div style="text-align:center; padding-top:2rem; color:var(--text-sub); font-size:0.9rem;">加载中...</div>`;
+            return;
+        }
+
+        const selectedPrompts = currentProject.prompts.filter(p => p.isSelected);
+
+        if (selectedPrompts.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding-top:2rem; color:var(--text-sub); font-size:0.9rem;">暂未勾选任何配置项</div>`;
+            document.getElementById('generatedId').innerText = "ID: --";
+            return;
+        }
+
+        const sortedSkeleton = [...(currentProject.skeleton || [])].sort((a, b) => a.sortOrder - b.sortOrder);
+        let html = '';
+        let globalIndex = 1;
+
+        sortedSkeleton.forEach(sk => {
+            const catPrompts = selectedPrompts.filter(p => p.category.id === sk.category.id);
+
+            if (catPrompts.length > 0) {
+                html += `<div class="preview-section">
+                    <div class="preview-section-title">${sk.category.name}</div>`;
+                catPrompts.forEach(p => {
+                    // 使用 Markdown 渲染内容
+                    const renderedContent = renderMarkdownPreview(p.content);
+                    html += `<div class="preview-block">
+                    <strong>${globalIndex}. ${escapeHtml(p.title)}</strong>
+                    <div class="preview-block-content">${renderedContent}</div>
+                </div>`;
+                    globalIndex++;
+                });
+                html += `</div>`;
+            }
+        });
+
+        container.innerHTML = html || '<div style="text-align:center; padding-top:2rem; color:var(--text-sub); font-size:0.9rem;">暂无内容</div>';
+    }
+
+    // ==================== Prompt CRUD ====================
+    async function openPromptModal(editId = null) {
+        const select = document.getElementById('promptCategory');
+        select.innerHTML = '';
+
+        // 检查是否有全局分类
+        if (db.globalCategories.length === 0) {
+            showToast('请先创建全局分类');
+            setTimeout(() => {
+                switchToGlobalCategories();
+            }, 1500);
+            return;
+        }
+
+        // 显示所有全局分类
+        db.globalCategories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.innerText = cat.name;
+            select.appendChild(opt);
+        });
+
+        // 编辑模式
+        if (editId) {
+            const p = currentProject.prompts.find(item => item.id === editId);
+            if (!p) {
+                showToast('Prompt 不存在');
+                return;
+            }
+
+            document.getElementById('promptModalTitle').innerText = "编辑 Prompt";
+            document.getElementById('editPromptId').value = p.id;
+            document.getElementById('promptTitle').value = p.title;
+            document.getElementById('promptCategory').value = p.category.id;
+            document.getElementById('promptContent').value = p.content;
+        } else {
+            // 新增模式
+            document.getElementById('promptModalTitle').innerText = "新增 Prompt";
+            document.getElementById('editPromptId').value = "";
+            document.getElementById('promptTitle').value = "";
+            document.getElementById('promptContent').value = "";
+            // 默认选中第一个分类
+            if (db.globalCategories.length > 0) {
+                select.value = db.globalCategories[0].id;
+            }
+        }
+
+        document.getElementById('promptModal').classList.add('open');
+
+        // 聚焦到标题输入框
+        setTimeout(() => {
+            document.getElementById('promptTitle').focus();
+        }, 100);
+    }
+
+    async function savePrompt() {
+        const id = document.getElementById('editPromptId').value;
+        const title = document.getElementById('promptTitle').value;
+        const categoryId = parseInt(document.getElementById('promptCategory').value);
+        const content = document.getElementById('promptContent').value;
+
+        if (!title || !content) {
+            alert("请填写完整内容");
+            return;
+        }
+
+        if (id) {
+            await fetchAPI(`/projects/${currentProjectId}/prompts/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({title, categoryId, content})
+            });
+        } else {
+            await fetchAPI(`/projects/${currentProjectId}/prompts`, {
+                method: 'POST',
+                body: JSON.stringify({title, categoryId, content})
+            });
+        }
+
+        closeModal('promptModal');
+        await loadCurrentProject();
+        renderGrid();
+        renderPreview();
+    }
+
+    // ==================== 完整预览 ====================
+    async function openFullPreview() {
+        const result = await fetchAPI(`/projects/${currentProjectId}/prompts/assemble`);
+
+        document.getElementById('fullPreviewContent').innerHTML =
+            `<div class="raw-view">${escapeHtml(result.content)}</div>`;
+        document.getElementById('markdownToggle').checked = false;
+        document.getElementById('modalGeneratedId').innerText = `当前 ID: ${result.id}`;
+        document.getElementById('fullPreviewModal').classList.add('open');
+    }
+
+    function togglePreviewMode() {
+        const isMarkdown = document.getElementById('markdownToggle').checked;
+        const container = document.getElementById('fullPreviewContent');
+        const rawContent = container.querySelector('.raw-view')?.textContent ||
+            container.querySelector('.markdown-body')?.getAttribute('data-raw') || '';
+
+        if (isMarkdown) {
+            const parsed = parseMarkdown(rawContent);
+            container.innerHTML = parsed;
+            container.querySelector('.markdown-body')?.setAttribute('data-raw', rawContent);
+        } else {
+            container.innerHTML = `<div class="raw-view">${escapeHtml(rawContent)}</div>`;
+        }
+    }
+
+    function parseMarkdown(text) {
+        let html = text
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+            .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
+            .replace(/`([^`]+)`/gim, '<code>$1</code>')
+            .replace(/^\- (.*$)/gim, '<li>$1</li>')
+            .replace(/\n\n/gim, '</p><p>')  // 双换行变段落
+            .replace(/\n/gim, ' ');  // 单换行变空格（移除 <br>）
+
+        // 包装列表
+        html = html.replace(/(<li>.*?<\/li>)+/gs, '<ul>$&</ul>');
+
+        return `<div class="markdown-body"><p>${html}</p></div>`;
+    }
+
+    // 用于预览块的 Markdown 渲染（更轻量）
+    function renderMarkdownPreview(text) {
+        if (!text) return '';
+
+        let html = text
+            // 标题
+            .replace(/^### (.*$)/gim, '<h4>$1</h4>')  // 用 h4 避免太大
+            .replace(/^## (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^# (.*$)/gim, '<h3>$1</h3>')
+            // 粗体
+            .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+            // 代码块
+            .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
+            // 行内代码
+            .replace(/`([^`]+)`/gim, '<code>$1</code>')
+            // 列表
+            .replace(/^\- (.*$)/gim, '<li>$1</li>')
+            .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+            // 段落处理
+            .replace(/\n\n/gim, '</p><p>')
+            .replace(/\n/gim, '<br>');
+
+        // 包装列表
+        html = html.replace(/(<li>.*?<\/li>(\s|<br>)*)+/gs, '<ul>$&</ul>');
+
+        // 清理
+        html = html
+            .replace(/<\/ul>(<br>)+<ul>/gim, '')
+            .replace(/<br><ul>/gim, '<ul>')
+            .replace(/<\/ul><br>/gim, '</ul>');
+
+        return `<p>${html}</p>`;
+    }
+
+    async function generateUniqueIdInModal() {
+        const result = await fetchAPI(`/projects/${currentProjectId}/prompts/assemble`);
+        document.getElementById('modalGeneratedId').innerText = `当前 ID: ${result.id}`;
+        showToast(`已生成 ID: ${result.id}`);
+    }
+
+    async function copyPreviewContent() {
+        const result = await fetchAPI(`/projects/${currentProjectId}/prompts/assemble`);
+        await navigator.clipboard.writeText(result.content);
+        showToast("内容已复制到剪贴板");
+    }
+
+    // ==================== 工具函数 ====================
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+    }
+
+    function showToast(msg) {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.innerText = msg;
+        document.body.appendChild(t);
+        setTimeout(() => {
+            t.style.opacity = '0';
+            setTimeout(() => t.remove(), 300);
+        }, 2000);
+    }
+
+    function escapeHtml(text) {
+        if (!text) return "";
+        return text.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // ==================== 页面加载初始化 ====================
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
