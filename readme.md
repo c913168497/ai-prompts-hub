@@ -14,31 +14,31 @@ AI 团队规范管理
 
 本项目采用 spring boot + mysql + jdk17
 
-## 启动说明
-1. 第一步先初始化表结构
-2. 启动项目
-3. 访问项目地址：http://localhost:8081
-4. 创建项目
+## 使用流程说明
+### 1. 第一步先初始化表结构
+### 2. 启动项目
+### 3. 访问项目地址：http://localhost:8081
+### 4. 创建项目
    ![img.png](doc/img.png)
-5. 新增分类
+### 5. 新增分类
    ![img_4.png](doc/img_4.png)
-6. 新增提示词块
+### 6. 新增提示词块
    ![img_1.png](doc/img_1.png)
    ![img_3.png](doc/img_3.png)
-7. 配置提示词骨架
+### 7. 配置提示词骨架
    ![img_5.png](doc/img_5.png)
    ![img_6.png](doc/img_6.png)
-8. 预览
+### 8. 预览
    ![img_7.png](doc/img_7.png)
    ![img_8.png](doc/img_8.png)
-9. 保存提示词
+### 9. 保存提示词
    ![img_9.png](doc/img_9.png)
    ![img_10.png](doc/img_10.png)
-10. 预览原始内容（非markdown格式）
+### 10. 预览原始内容（非markdown格式）
     ![img_11.png](doc/img_11.png)
-11. ID 说明
+### 11. ID 说明
     ![img_12.png](doc/img_12.png)
-12. 编辑骨架
+### 12. 编辑骨架
     ![img_13.png](doc/img_13.png)
 
 mcp使用视频介绍：
